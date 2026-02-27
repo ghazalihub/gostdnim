@@ -153,7 +153,7 @@ proc ToUpper*(s: string): string =
 
 proc ToTitle*(s: string): string =
   var res = ""
-  for r in s.runes: res.add($unicode.toTitle(r))
+  for r in s.runes: res.add($unicode.toUpper(r))
   return res
 
 proc Trim*(s, cutset: string): string =
@@ -165,14 +165,15 @@ proc Trim*(s, cutset: string): string =
     start += r.size
   var stop = s.len - 1
   while stop >= start:
-    var i = 0
+    var i = start
     var lastRune = Rune(0)
-    var lastIdx = 0
+    var lastIdx = start
     while i <= stop:
       lastIdx = i
       lastRune = s.runeAt(i)
       i += lastRune.size
-    if lastRune notin cutsetRunes: break
+    if lastRune notin cutsetRunes:
+      break
     stop = lastIdx - 1
   if start > stop: return ""
   return s[start .. stop]
@@ -189,16 +190,19 @@ proc TrimLeft*(s, cutset: string): string =
 proc TrimRight*(s, cutset: string): string =
   let cutsetRunes = cutset.toRunes
   var stop = s.len - 1
-  while stop >= 0:
-    var i = 0
+  var start = 0
+  while stop >= start:
+    var i = start
     var lastRune = Rune(0)
-    var lastIdx = 0
+    var lastIdx = start
     while i <= stop:
       lastIdx = i
       lastRune = s.runeAt(i)
       i += lastRune.size
-    if lastRune notin cutsetRunes: break
+    if lastRune notin cutsetRunes:
+      break
     stop = lastIdx - 1
+  if stop < 0: return ""
   return s[0 .. stop]
 
 proc TrimSpace*(s: string): string = strutils.strip(s)

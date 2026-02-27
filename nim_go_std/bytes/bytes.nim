@@ -1,4 +1,5 @@
 import std/[strutils, unicode, algorithm]
+import ../errors/errors as goerrors
 
 proc Equal*(a, b: seq[byte]): bool =
   if a.len != b.len: return false
@@ -265,12 +266,12 @@ type
 proc NewBuffer*(buf: seq[byte]): Buffer = Buffer(buf: buf)
 proc NewBufferString*(s: string): Buffer = Buffer(buf: cast[seq[byte]](s))
 
-proc Write*(b: var Buffer, p: seq[byte]): (int, ref Exception) =
+proc Write*(b: var Buffer, p: seq[byte]): (int, goerrors.GoError) =
   b.buf.add(p)
   return (p.len, nil)
 
 proc WriteByte*(b: var Buffer, c: byte) = b.buf.add(c)
-proc WriteString*(b: var Buffer, s: string): (int, ref Exception) =
+proc WriteString*(b: var Buffer, s: string): (int, goerrors.GoError) =
   for c in s: b.buf.add(byte(c))
   return (s.len, nil)
 

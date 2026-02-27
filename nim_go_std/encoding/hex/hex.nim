@@ -1,5 +1,5 @@
 import std/strutils
-import ../../strconv/strconv as gostrconv
+import ../../errors/errors as goerrors
 
 proc EncodedLen*(n: int): int = n * 2
 proc DecodedLen*(x: int): int = x div 2
@@ -12,19 +12,18 @@ proc Encode*(dst, src: var seq[byte]): int =
 
 proc EncodeToString*(src: seq[byte]): string = toHex(cast[string](src)).toLowerAscii
 
-proc Decode*(dst: var seq[byte], src: seq[byte]): (int, gostrconv.GoError) =
+proc Decode*(dst: var seq[byte], src: seq[byte]): (int, goerrors.GoError) =
   try:
     let s = parseHexStr(cast[string](src))
     for i in 0 ..< min(s.len, dst.len): dst[i] = byte(s[i])
     return (s.len, nil)
-  except: return (0, gostrconv.GoError(msg: "invalid byte"))
+  except: return (0, goerrors.New("invalid byte"))
 
-proc DecodeString*(s: string): (seq[byte], gostrconv.GoError) =
+proc DecodeString*(s: string): (seq[byte], goerrors.GoError) =
   try:
     let res = parseHexStr(s)
     return (cast[seq[byte]](res), nil)
-  except: return (@[], gostrconv.GoError(msg: "invalid byte"))
+  except: return (@[], goerrors.New("invalid byte"))
 
 proc Dump*(data: seq[byte]): string =
-  # Very simplified hex dump
   toHex(cast[string](data))

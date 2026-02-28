@@ -1,4 +1,4 @@
-import std/locks
+import std/[locks, tables]
 import ../errors/errors as goerrors
 
 type
@@ -17,9 +17,7 @@ proc Unlock*(m: var Mutex) = m.l.release()
 
 type
   RWMutex* = object
-    # Nim's locks doesn't have RWLock in all versions/platforms,
-    # but let's assume it for now if available, or simulate.
-    l: locks.Lock # Simplified to Mutex for now
+    l: locks.Lock # Simplified
 
 proc initRWMutex(): RWMutex =
   result.l.initLock()
@@ -35,7 +33,7 @@ type
     cond: locks.Cond
     l: locks.Lock
 
-proc initWaitGroup(): WaitGroup =
+proc NewWaitGroup*(): WaitGroup =
   var wg = WaitGroup()
   wg.cond.initCond()
   wg.l.initLock()
@@ -62,7 +60,7 @@ type
     done: bool
     l: locks.Lock
 
-proc initOnce(): Once =
+proc NewOnce*(): Once =
   var o = Once()
   o.l.initLock()
   o.done = false
@@ -75,3 +73,55 @@ proc Do*(o: Once, f: proc()) =
     f()
     o.done = true
   o.l.release()
+
+type
+  Cond* = ref object
+    L*: Locker
+    c: locks.Cond
+
+proc NewCond*(l: Locker): Cond =
+  var c = Cond(L: l)
+  c.c.initCond()
+  return c
+
+proc Wait*(c: Cond) = discard
+
+proc Signal*(c: Cond) = c.c.signal()
+proc Broadcast*(c: Cond) = c.c.broadcast()
+
+type
+  Map* = ref object
+    l: locks.Lock
+    m: Table[string, RootRef] # Use RootRef for generic values
+
+proc NewMap*(): Map =
+  var m = Map()
+  m.l.initLock()
+  m.m = initTable[string, RootRef]()
+  return m
+
+proc Load*(m: Map, key: string): (RootRef, bool) =
+  m.l.acquire()
+  defer: m.l.release()
+  if key in m.m: return (m.m[key], true)
+  return (nil, false)
+
+proc Store*(m: Map, key: string, value: RootRef) =
+  m.l.acquire()
+  defer: m.l.release()
+  m.m[key] = value
+
+proc Delete*(m: Map, key: string) =
+  m.l.acquire()
+  defer: m.l.release()
+  m.m.del(key)
+
+proc Range*(m: Map, f: proc(key: string, value: RootRef): bool) =
+  m.l.acquire()
+  defer: m.l.release()
+  for k, v in m.m:
+    if not f(k, v): break
+
+type
+  Pool* = ref object
+    New*: proc(): RootRef

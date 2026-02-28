@@ -1,5 +1,6 @@
 import ../../io/io as goio
 import ../../errors/errors as goerrors
+import zippy/zlib as nimzlib
 
 type
   Reader* = object

@@ -1,4 +1,4 @@
-import std/httpclient
+import std/[httpclient, asynchttpserver, asyncdispatch, tables, strutils]
 import ../../errors/errors as goerrors
 import ../../io/io as goio
 
@@ -26,5 +26,27 @@ type
     URL*: auto
     Header*: auto
 
-proc HandleFunc*(pattern: string, handler: proc(w: ResponseWriter, r: Request)) =
-  discard
+  Handler* = concept x
+    x.ServeHTTP(ResponseWriter, Request)
+
+  ServeMux* = ref object
+    handlers: Table[string, RootRef] # Use RootRef for generic proc storage
+
+proc NewServeMux*(): ServeMux = ServeMux(handlers: initTable[string, RootRef]())
+
+proc HandleFunc*(mux: ServeMux, pattern: string, handler: any) =
+  mux.handlers[pattern] = cast[RootRef](handler)
+
+proc Handle*(mux: ServeMux, pattern: string, handler: Handler) =
+  mux.handlers[pattern] = cast[RootRef](handler)
+
+var DefaultServeMux* = NewServeMux()
+
+proc HandleFunc*(pattern: string, handler: any) =
+  DefaultServeMux.HandleFunc(pattern, handler)
+
+proc Handle*(pattern: string, handler: Handler) =
+  DefaultServeMux.Handle(pattern, handler)
+
+proc ListenAndServe*(addr_str: string, handler: Handler): goerrors.GoError =
+  return nil
